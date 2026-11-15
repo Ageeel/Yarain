@@ -11,3 +11,6 @@ AVATAR = {"F": f"{_PUB}/female.png", "M": f"{_PUB}/male.png"}  # ارفع male.p
 
 # تطبيق إدخال البيانات: للمشرف فقط (يخفي إنشاء الحساب ويرفض أي حساب غير مشرف)
 ADMIN_ONLY = True
+
+# نسخة تصميم صفحة التفاصيل: "coin_version" (بطاقات زرقاء) أو "classic" (القديم)
+DETAILS_VERSION = "coin_version"

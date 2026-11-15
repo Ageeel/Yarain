@@ -6,39 +6,11 @@ import flet as ft
 from sb import create_client
 
 import config
+import coin_version
 import logic as L
 
-BG, BAR, LABEL, TXT = "#EAEEF1", "#AEBDC6", "#D0D8DD", "#1F2933"
-BOLD = ft.FontWeight.BOLD
-
-OCC_TYPES = {"birth": "ولادة", "birthday": "عيد ميلاد", "engagement": "خطوبة",
-             "wedding": "زواج", "graduation": "تخرج", "new_job": "وظيفة جديدة",
-             "death": "وفاة", "other": "أخرى"}
-MSG_TYPES = {"suggestion": "اقتراح", "correction": "تصحيح معلومة", "question": "سؤال",
-             "complaint": "شكوى", "other": "أخرى"}
-MARRIAGE_STATUS = {"married": "قائم", "divorced": "منتهي (طلاق)", "widowed": "ترمّل (توفي أحد الزوجين)"}
-CONTACT_FIELDS = [("phone", "الهاتف"), ("wapp", "واتساب"), ("gml", "البريد (Gmail)"),
-                  ("fb", "فيسبوك"), ("telg", "تيليجرام")]
-CONTACT_ICONS = {"phone": ft.icons.PHONE, "wapp": ft.icons.CHAT, "gml": ft.icons.EMAIL,
-                 "fb": getattr(ft.icons, "FACEBOOK", ft.icons.PUBLIC), "telg": ft.icons.SEND}
-
-
-def err(ex):
-    m = getattr(ex, "message", None) or str(ex)
-    return str(m)[:200]
-
-
-def contact_url(kind, v):
-    v = v.strip()
-    if kind == "phone":
-        return "tel:" + v
-    if kind == "wapp":
-        return "https://wa.me/" + "".join(c for c in v if c.isdigit())
-    if kind == "gml":
-        return "mailto:" + v
-    if kind == "telg":
-        return v if v.startswith("http") else "https://t.me/" + v.lstrip("@")
-    return v if v.startswith("http") else "https://" + v
+from common import (BAR, BG, BOLD, CONTACT_FIELDS, CONTACT_ICONS, LABEL, MARRIAGE_STATUS,
+                    MSG_TYPES, OCC_TYPES, TXT, contact_url, err, field)
 
 
 class FamilyApp:
@@ -55,6 +27,9 @@ class FamilyApp:
         page.title = "شجرة العائلة"
         page.rtl = True
         page.bgcolor = BG
+        page.theme_mode = ft.ThemeMode.LIGHT
+        page.theme = ft.Theme(color_scheme=ft.ColorScheme(
+            primary="#0B3FA0", on_surface="black", on_surface_variant="black", outline="black"))
         page.padding = 0
         page.on_view_pop = self.back
         self.start()
@@ -157,9 +132,9 @@ class FamilyApp:
         self.spouses = L.build_spouses(self.people, self.marriages)
 
     def login_view(self):
-        email = ft.TextField(label="البريد الإلكتروني", keyboard_type=ft.KeyboardType.EMAIL)
-        pw = ft.TextField(label="كلمة المرور", password=True, can_reveal_password=True)
-        name = ft.TextField(label="الاسم الكامل", visible=False)
+        email = field(label="البريد الإلكتروني", keyboard_type=ft.KeyboardType.EMAIL)
+        pw = field(label="كلمة المرور", password=True, can_reveal_password=True)
+        name = field(label="الاسم الكامل", visible=False)
         msg = ft.Text(color="red")
         mode = {"signup": False}
         btn = ft.ElevatedButton("دخول")
@@ -295,6 +270,8 @@ class FamilyApp:
         return False
 
     def person_view(self, pid):
+        if config.DETAILS_VERSION == "coin_version":
+            return coin_version.person_view(self, pid)
         p = self.people.get(pid)
         if not p:
             return self.simple_view("لم يُعثر على هذا الشخص")
@@ -428,7 +405,7 @@ class FamilyApp:
         f = {}
 
         def tf(key, label, src, **kw):
-            f[key] = ft.TextField(label=label, value=src.get(key) or "", **kw)
+            f[key] = field(label=label, value=src.get(key) or "", **kw)
             return f[key]
 
         deceased = ft.Switch(label="متوفى", value=bool(p.get("is_deceased")))
@@ -556,7 +533,7 @@ class FamilyApp:
         labels = list(L.KINDS) if ref else ["شخص جديد (ذكر)", "شخص جديد (أنثى)"]
         kind = ft.Dropdown(label="النوع", value="ابن" if ref else labels[0],
                            options=[ft.dropdown.Option(k) for k in labels])
-        name = ft.TextField(label="الاسم")
+        name = field(label="الاسم")
 
         def ok():
             nm = (name.value or "").strip()
@@ -609,8 +586,8 @@ class FamilyApp:
     def occasion_dialog(self, pid):
         typ = ft.Dropdown(label="النوع", value="other",
                           options=[ft.dropdown.Option(k, v) for k, v in OCC_TYPES.items()])
-        content = ft.TextField(label="التفاصيل", multiline=True, min_lines=2, max_lines=5)
-        date = ft.TextField(label="التاريخ (2026-12-31) اختياري")
+        content = field(label="التفاصيل", multiline=True, min_lines=2, max_lines=5)
+        date = field(label="التاريخ (2026-12-31) اختياري")
 
         def ok():
             good, d = L.parse_date(date.value)
@@ -626,7 +603,7 @@ class FamilyApp:
     def message_dialog(self, pid):
         typ = ft.Dropdown(label="النوع", value="suggestion",
                           options=[ft.dropdown.Option(k, v) for k, v in MSG_TYPES.items()])
-        text = ft.TextField(label="الرسالة", multiline=True, min_lines=3, max_lines=6)
+        text = field(label="الرسالة", multiline=True, min_lines=3, max_lines=6)
 
         def ok():
             t = (text.value or "").strip()
